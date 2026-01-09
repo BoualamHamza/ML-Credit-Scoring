@@ -1,0 +1,89 @@
+# Python
+.cursor/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Model artifacts
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.onnx
+
+# Data
+data/
+data/processed/
+data/features/
+*.csv
+!data/input/*.csv
+src/data
+src/data/*
+context/
+
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Pre-commit
+.pre-commit-config.yaml
