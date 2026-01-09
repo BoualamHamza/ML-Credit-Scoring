@@ -87,3 +87,9 @@ htmlcov/
 
 # Pre-commit
 .pre-commit-config.yaml
+
+# Azure publish profiles (sensitive)
+*.PublishSettings
+*.publishsettings
+*.pubxml
+*.pubxml.user

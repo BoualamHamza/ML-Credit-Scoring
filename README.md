@@ -115,21 +115,45 @@ python src/models/train.py
 
 ### Starting API
 ```bash
-uvicorn src.api.main:app --reload
+uvicorn src.api.api:app --reload
 ```
 
-### Testing API
+### Starting Streamlit Interface
 ```bash
 streamlit run src/api/streamlit_app.py
 ```
 
+### Testing
+```bash
+pytest tests/test_api.py -v
+```
+
 ## MLOps Pipeline
 
-1. **Experiment Tracking**: MLFlow for model versioning and metrics
-2. **Model Registry**: Centralized model storage and management
-3. **Model Serving**: MLFlow serving for production deployment
-4. **CI/CD**: GitHub Actions for automated testing and deployment
-5. **Monitoring**: Data drift detection and model performance monitoring
+1. **Experiment Tracking**: MLFlow for model versioning and metrics (during training)
+2. **Model Registry**: Centralized model storage and management (during training)
+3. **Model Serving**: FastAPI REST API for production deployment
+4. **CI/CD**: GitHub Actions for automated testing and deployment to Azure Web App
+5. **Monitoring**: Health check endpoints for API monitoring
+
+## Deployment
+
+### Azure Web App Services
+
+L'API est déployée sur Azure Web App Services via GitHub Actions CI/CD.
+
+**Configuration requise :**
+- Azure Web App avec runtime Python 3.11
+- GitHub Secrets configurés (voir `src/api/README.md`)
+- Fichiers requis dans le repository :
+  - `src/models/lgbm_best_model.pkl`
+  - `src/dataset/features_train.pkl`
+  - `src/dataset/feature_names.json`
+
+**Déploiement :**
+- Automatique sur push vers `main`/`master`
+- Pipeline : Build → Test → Deploy
+- Voir `.github/workflows/azure-deploy.yml` pour les détails
 
 ## Business Context
 
