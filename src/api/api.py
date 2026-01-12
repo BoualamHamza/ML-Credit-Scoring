@@ -371,6 +371,27 @@ def calculate_shap_values(features: pd.DataFrame, top_n: int = 20) -> List[Dict]
         )
 
 
+@app.get("/")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "message": "Credit Scoring API",
+        "version": "1.0.0",
+        "status": "running",
+        "model_loaded": model_loaded,
+        "endpoints": {
+            "health": "/health",
+            "model_info": "/model/info",
+            "client_ids": "/clients/ids",
+            "predict": "/predict/client_id",
+            "predict_shap": "/predict/client_id/shap",
+            "docs": "/docs",
+            "redoc": "/redoc"
+        },
+        "description": "API for credit scoring predictions using LightGBM model"
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""

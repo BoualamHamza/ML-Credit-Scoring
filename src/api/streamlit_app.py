@@ -11,10 +11,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import json
+import os
 from typing import Optional, Dict, List
 
 # Configuration
-API_URL = "http://localhost:8000"
+# Use environment variable for API URL (for Streamlit Cloud deployment)
+# Default to localhost for local development
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 API_TIMEOUT = 30
 
 
@@ -86,7 +89,7 @@ def predict_by_client_id(client_id: int) -> Optional[Dict]:
             st.error(f"API Error: {error_detail}")
             return None
     except requests.exceptions.ConnectionError:
-        st.error("❌ Cannot connect to API. Please make sure the API is running on http://localhost:8000")
+        st.error(f"❌ Cannot connect to API at {API_URL}. Please check the API configuration.")
         return None
     except Exception as e:
         st.error(f"Error making prediction: {e}")
@@ -271,18 +274,17 @@ def main():
     
     # Check API health
     if not check_api_health():
-        st.error("""
+        st.error(f"""
         ⚠️ **L'API n'est pas accessible**
         
-        Veuillez démarrer l'API FastAPI en exécutant:
+        L'API devrait être disponible à : **{API_URL}**
+        
+        Si vous exécutez en local, veuillez démarrer l'API FastAPI :
         ```bash
         uvicorn src.api.api:app --reload
         ```
-        ou
-        ```bash
-        python -m src.api.api
-        ```
         """)
+        st.info(f"🌐 Tentative de connexion à : {API_URL}")
         st.stop()
     
     # Sidebar
