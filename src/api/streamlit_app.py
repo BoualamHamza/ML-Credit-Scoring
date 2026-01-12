@@ -11,7 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import json
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 # Configuration
 API_URL = "http://localhost:8000"
@@ -36,6 +36,35 @@ def get_model_info() -> Optional[Dict]:
         return None
     except Exception as e:
         st.error(f"Error connecting to API: {e}")
+        return None
+
+
+def get_available_client_ids() -> Optional[List[int]]:
+    """Get list of available client IDs from API"""
+    try:
+        response = requests.get(f"{API_URL}/clients/ids", timeout=API_TIMEOUT)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("client_ids", [])
+        return None
+    except Exception as e:
+        st.error(f"Error getting client IDs: {e}")
+        return None
+
+
+def get_shap_values(client_id: int, top_n: int = 20) -> Optional[Dict]:
+    """Get SHAP values for a client ID"""
+    try:
+        response = requests.post(
+            f"{API_URL}/predict/client_id/shap?top_n={top_n}",
+            json={"client_id": client_id},
+            timeout=API_TIMEOUT
+        )
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception as e:
+        st.error(f"Error getting SHAP values: {e}")
         return None
 
 
@@ -121,6 +150,74 @@ def display_prediction_result(result: Dict):
     
     st.plotly_chart(fig, use_container_width=True)
     
+    # SHAP Values - Feature Contributions
+    st.subheader("📊 Variables les plus contributives à la prédiction")
+    with st.spinner("Calcul des contributions SHAP en cours..."):
+        shap_result = get_shap_values(client_id, top_n=20)
+        
+        if shap_result:
+            shap_values = shap_result.get("shap_values", [])
+            
+            if shap_values:
+                # Create DataFrame for easier manipulation
+                df_shap = pd.DataFrame([
+                    {
+                        "Feature": item["feature"],
+                        "Contribution": item["value"],
+                        "Importance": item["importance"]
+                    }
+                    for item in shap_values
+                ])
+                
+                # Create horizontal bar chart
+                fig_shap = go.Figure()
+                
+                # Color bars based on positive/negative contribution
+                colors = ["red" if x < 0 else "green" for x in df_shap["Contribution"]]
+                
+                fig_shap.add_trace(go.Bar(
+                    y=df_shap["Feature"],
+                    x=df_shap["Contribution"],
+                    orientation='h',
+                    marker_color=colors,
+                    text=[f"{x:.4f}" for x in df_shap["Contribution"]],
+                    textposition="auto",
+                    name="Contribution SHAP"
+                ))
+                
+                fig_shap.update_layout(
+                    title="Top 20 Variables Contribuant à la Prédiction (SHAP Values)",
+                    xaxis_title="Contribution SHAP",
+                    yaxis_title="Variable",
+                    height=600,
+                    yaxis={'categoryorder': 'total ascending'},
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig_shap, use_container_width=True)
+                
+                # Add explanation
+                st.info("""
+                **Interprétation des valeurs SHAP :**
+                - **Valeurs positives (vert)** : Augmentent la probabilité de défaut
+                - **Valeurs négatives (rouge)** : Diminuent la probabilité de défaut
+                - Plus la valeur absolue est grande, plus la variable influence la prédiction
+                """)
+                
+                # Display as table
+                with st.expander("📋 Détails des contributions"):
+                    st.dataframe(
+                        df_shap.style.format({
+                            "Contribution": "{:.4f}",
+                            "Importance": "{:.4f}"
+                        }),
+                        use_container_width=True
+                    )
+            else:
+                st.warning("Aucune valeur SHAP disponible")
+        else:
+            st.warning("Impossible de récupérer les valeurs SHAP")
+    
     # Detailed information
     with st.expander("📊 Détails de la prédiction"):
         st.json(result)
@@ -131,17 +228,24 @@ def predict_by_client_id_ui():
     st.header("🔍 Prédiction par ID Client")
     
     st.markdown("""
-    Entrez l'ID du client (SK_ID_CURR) pour obtenir une prédiction de risque de défaut.
+    Sélectionnez l'ID du client (SK_ID_CURR) pour obtenir une prédiction de risque de défaut.
     """)
     
-    # Input for client ID
-    client_id = st.number_input(
+    # Get available client IDs
+    client_ids = get_available_client_ids()
+    
+    if client_ids is None or len(client_ids) == 0:
+        st.error("❌ Impossible de récupérer la liste des clients disponibles")
+        st.info("Veuillez vérifier que l'API est correctement configurée et que le dataset est chargé.")
+        return
+    
+    # Selectbox for client ID
+    default_index = 0 if client_ids else None
+    client_id = st.selectbox(
         "ID Client (SK_ID_CURR)",
-        min_value=100000,
-        max_value=999999999,
-        value=100001,
-        step=1,
-        help="Entrez l'identifiant unique du client"
+        options=client_ids,
+        index=default_index,
+        help="Sélectionnez l'identifiant unique du client dans la liste déroulante"
     )
     
     if st.button("🔮 Prédire", type="primary"):

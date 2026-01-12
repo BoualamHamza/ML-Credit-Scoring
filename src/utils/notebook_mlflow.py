@@ -188,7 +188,7 @@ class NotebookMLFlow:
         plt.tight_layout()
         mlflow.log_figure(fig, f"{model_name}_plots.png")
         plt.show()
-
+    
 
     def _create_threshold_optimization_plots(self, y_true, y_pred_proba, model_name):
         """
@@ -716,12 +716,12 @@ class NotebookMLFlow:
                 )
             else:
                 # Fallback for other sklearn models
-                mlflow.sklearn.log_model(
-                    model,
-                    "model",
+            mlflow.sklearn.log_model(
+                model,
+                "model",
                     signature=signature,
-                    registered_model_name=f"{model_name}_best"
-                )
+                registered_model_name=f"{model_name}_best"
+            )
             
             run_id = mlflow.active_run().info.run_id
             print(f"\n✅ Best model logged to MLflow")

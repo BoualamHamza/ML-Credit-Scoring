@@ -34,18 +34,30 @@ def test_client():
 @pytest.fixture(scope="module")
 def sample_client_id():
     """Get a sample client ID from the dataset if available"""
+    # Try sample dataset first (for Azure deployment)
+    sample_path = BASE_DIR / "src" / "dataset" / "features_train_sample_1000.pkl"
     features_path = BASE_DIR / "src" / "dataset" / "features_train.pkl"
-    if features_path.exists():
+    
+    # Try sample dataset first
+    if sample_path.exists():
+        with open(sample_path, 'rb') as f:
+            df = pickle.load(f)
+    elif features_path.exists():
         with open(features_path, 'rb') as f:
             df = pickle.load(f)
-        if 'SK_ID_CURR' in df.columns:
-            return int(df['SK_ID_CURR'].iloc[0])
-        # If SK_ID_CURR is the index
-        if hasattr(df.index, 'name') and df.index.name == 'SK_ID_CURR':
-            return int(df.index[0])
-        # Try to get from index if it's already set
-        if isinstance(df.index, pd.RangeIndex) == False:
-            return int(df.index[0])
+    else:
+        return 100001  # Default test ID
+    
+    # Extract client ID
+    if 'SK_ID_CURR' in df.columns:
+        return int(df['SK_ID_CURR'].iloc[0])
+    # If SK_ID_CURR is the index
+    if hasattr(df.index, 'name') and df.index.name == 'SK_ID_CURR':
+        return int(df.index[0])
+    # Try to get from index if it's already set
+    if not isinstance(df.index, pd.RangeIndex):
+        return int(df.index[0])
+    
     return 100001  # Default test ID
 
 
@@ -202,6 +214,94 @@ def test_error_handling_missing_field(test_client):
     
     # Should return 422 (validation error)
     assert response.status_code == 422
+
+
+def test_get_client_ids(test_client):
+    """Test getting list of available client IDs"""
+    response = test_client.get("/clients/ids")
+    
+    if response.status_code == 200:
+        data = response.json()
+        assert "client_ids" in data
+        assert "total" in data
+        assert isinstance(data["client_ids"], list)
+        assert isinstance(data["total"], int)
+        assert data["total"] == len(data["client_ids"])
+        # If we have client IDs, they should be integers
+        if len(data["client_ids"]) > 0:
+            assert isinstance(data["client_ids"][0], int)
+    elif response.status_code == 503:
+        # Model not loaded - acceptable in test environment
+        pass
+    else:
+        pytest.fail(f"Unexpected status code: {response.status_code}")
+
+
+def test_predict_client_id_shap(test_client, sample_client_id):
+    """Test SHAP values endpoint"""
+    response = test_client.post(
+        "/predict/client_id/shap",
+        json={"client_id": sample_client_id}
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        assert "client_id" in data
+        assert "shap_values" in data
+        assert "top_features" in data
+        
+        assert data["client_id"] == sample_client_id
+        assert isinstance(data["shap_values"], list)
+        assert isinstance(data["top_features"], int)
+        assert data["top_features"] > 0
+        
+        # Validate SHAP value structure
+        if len(data["shap_values"]) > 0:
+            shap_item = data["shap_values"][0]
+            assert "feature" in shap_item
+            assert "value" in shap_item
+            assert "importance" in shap_item
+            assert isinstance(shap_item["feature"], str)
+            assert isinstance(shap_item["value"], float)
+            assert isinstance(shap_item["importance"], float)
+            assert shap_item["importance"] >= 0  # Importance is absolute value
+    elif response.status_code == 404:
+        # Client ID not found - acceptable if dataset not loaded
+        assert "not found" in response.json()["detail"].lower()
+    elif response.status_code == 503:
+        # Model not loaded - acceptable in test environment
+        pass
+    else:
+        pytest.fail(f"Unexpected status code: {response.status_code}")
+
+
+def test_predict_client_id_shap_with_top_n(test_client, sample_client_id):
+    """Test SHAP values endpoint with custom top_n parameter"""
+    response = test_client.post(
+        "/predict/client_id/shap?top_n=10",
+        json={"client_id": sample_client_id}
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        assert "top_features" in data
+        assert data["top_features"] <= 10
+        assert len(data["shap_values"]) <= 10
+    elif response.status_code in [404, 503]:
+        # Acceptable if dataset/model not loaded
+        pass
+
+
+def test_predict_client_id_shap_invalid_id(test_client):
+    """Test SHAP values endpoint with invalid client ID"""
+    invalid_id = 999999999
+    response = test_client.post(
+        "/predict/client_id/shap",
+        json={"client_id": invalid_id}
+    )
+    
+    # Should return 404 if dataset is loaded, or 503 if model not loaded
+    assert response.status_code in [404, 503]
 
 
 if __name__ == "__main__":

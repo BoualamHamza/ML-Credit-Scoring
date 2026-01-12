@@ -6,12 +6,36 @@
 # Set Python path
 export PYTHONPATH="${PYTHONPATH}:${HOME}/site/wwwroot"
 
+# Change to the application directory
+cd ${HOME}/site/wwwroot || cd /home/site/wwwroot || pwd
+
+# Check if sample dataset exists, create it if not
+SAMPLE_DATASET="src/dataset/features_train_sample_1000.pkl"
+FULL_DATASET="src/dataset/features_train.pkl"
+
+if [ ! -f "$SAMPLE_DATASET" ]; then
+    echo "📦 Sample dataset not found. Checking if full dataset exists..."
+    if [ -f "$FULL_DATASET" ]; then
+        echo "✅ Full dataset found. Creating sample dataset..."
+        python scripts/create_sample_dataset.py
+        if [ $? -eq 0 ]; then
+            echo "✅ Sample dataset created successfully"
+        else
+            echo "⚠️  Warning: Failed to create sample dataset. API will use fallback."
+        fi
+    else
+        echo "⚠️  Warning: Neither sample nor full dataset found. API may not work correctly."
+    fi
+else
+    echo "✅ Sample dataset already exists"
+fi
+
 # Run the FastAPI application
 # Azure Web App uses PORT environment variable
 # Default to 8000 if not set
 PORT=${PORT:-8000}
 
+echo "🚀 Starting FastAPI server on port ${PORT}..."
+
 # Start uvicorn server
-# Note: Azure Web App runs from the wwwroot directory
-cd ${HOME}/site/wwwroot || cd /home/site/wwwroot || pwd
 python -m uvicorn src.api.api:app --host 0.0.0.0 --port ${PORT}
