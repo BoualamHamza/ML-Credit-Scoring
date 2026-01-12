@@ -35,9 +35,24 @@ jobs:
         pytest tests/test_api.py -v --tb=short
       continue-on-error: false
     
+    - name: Create deployment package
+      run: |
+        echo "📦 Creating optimized deployment package..."
+        mkdir -p deploy
+        # Copy only essential files
+        cp -r src deploy/
+        cp -r scripts deploy/ 2>/dev/null || true
+        cp requirements.txt deploy/
+        cp startup.sh deploy/
+        cp .deployment deploy/ 2>/dev/null || true
+        # Make startup.sh executable
+        chmod +x deploy/startup.sh
+        echo "✅ Deployment package created"
+        du -sh deploy/
+    
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: .
+        package: deploy

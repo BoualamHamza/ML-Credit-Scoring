@@ -13,10 +13,8 @@ echo "📂 Current directory: $(pwd)"
 echo "🐍 Python version: $(python --version)"
 echo "📦 Python path: $(which python)"
 
-# Install/upgrade pip and install dependencies
-echo "📦 Installing dependencies..."
-python -m pip install --upgrade pip --quiet
-pip install -r requirements.txt --quiet
+# Note: Dependencies are installed automatically by Azure during deployment
+# (via .deployment file with SCM_DO_BUILD_DURING_DEPLOYMENT=true)
 
 # Check if sample dataset exists, create it if not
 SAMPLE_DATASET="src/dataset/features_train_sample_1000.pkl"
