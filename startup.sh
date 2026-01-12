@@ -4,10 +4,19 @@
 # This script is executed when the Azure Web App starts
 
 # Set Python path
-export PYTHONPATH="${PYTHONPATH}:${HOME}/site/wwwroot"
+export PYTHONPATH="${PYTHONPATH}:/home/site/wwwroot"
 
-# Change to the application directory
-cd ${HOME}/site/wwwroot || cd /home/site/wwwroot || pwd
+# Change to the application directory (Azure uses /home/site/wwwroot)
+cd /home/site/wwwroot || cd ${HOME}/site/wwwroot || pwd
+
+echo "📂 Current directory: $(pwd)"
+echo "🐍 Python version: $(python --version)"
+echo "📦 Python path: $(which python)"
+
+# Install/upgrade pip and install dependencies
+echo "📦 Installing dependencies..."
+python -m pip install --upgrade pip --quiet
+pip install -r requirements.txt --quiet
 
 # Check if sample dataset exists, create it if not
 SAMPLE_DATASET="src/dataset/features_train_sample_1000.pkl"
