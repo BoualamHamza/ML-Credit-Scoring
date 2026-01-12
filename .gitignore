@@ -57,6 +57,10 @@ data/features/
 !data/input/*.csv
 src/data
 src/data/*
+# Ignore large dataset files, but allow the sample
+src/dataset/features_train.pkl
+# Allow the sample dataset for Azure deployment
+!src/dataset/features_train_sample_1000.pkl
 context/
 
 
